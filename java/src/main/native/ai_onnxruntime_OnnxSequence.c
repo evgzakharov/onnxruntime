@@ -173,6 +173,51 @@ JNIEXPORT jfloatArray JNICALL Java_ai_onnxruntime_OnnxSequence_getFloatValues(JN
 
 /*
  * Class:     ai_onnxruntime_OnnxSequence
+ * Method:    getFloatValuesAll
+ * Signature: (JJI)[F
+ */
+JNIEXPORT jfloatArray JNICALL Java_ai_onnxruntime_OnnxSequence_getFloatValuesAll
+  (JNIEnv *jniEnv, jobject jobj, jlong apiHandle, jlong handle, jlong allocatorHandle, jint valueIndex) {
+    (void) jobj; // Required JNI parameter not needed by functions which don't need to access their host object.
+    const OrtApi* api = (const OrtApi*) apiHandle;
+    OrtValue* sequence = (OrtValue*) handle;
+    OrtAllocator* allocator = (OrtAllocator*) allocatorHandle;
+
+     // Get the element count of this sequence
+    size_t count;
+    checkOrtStatus(jniEnv,api,api->GetValueCount(sequence,&count));
+
+    float* values;
+    checkOrtStatus(jniEnv,api,api->AllocatorAlloc(allocator,sizeof(float)*count,(void**)&values));
+
+    for (size_t index = 0; index < count; index++) {
+      // Extract element
+      OrtValue* element;
+      checkOrtStatus(jniEnv,api,api->GetValue((OrtValue*)handle,index,allocator,&element));
+
+      // Extract values from element
+      OrtValue* indexValues;
+      checkOrtStatus(jniEnv,api,api->GetValue(element,1,allocator,&indexValues));
+
+      // Extract the values
+      float* arr;
+      checkOrtStatus(jniEnv,api,api->GetTensorMutableData((OrtValue*)indexValues,(void**)&arr));
+      values[index] = arr[valueIndex];
+
+      api->ReleaseValue(indexValues);
+      api->ReleaseValue(element);
+    }
+
+    jfloatArray outputArray = (*jniEnv)->NewFloatArray(jniEnv,safecast_size_t_to_jsize(count));
+    (*jniEnv)->SetFloatArrayRegion(jniEnv,outputArray,0,safecast_size_t_to_jsize(count),values);
+
+    checkOrtStatus(jniEnv,api,api->AllocatorFree(allocator,values));
+
+    return outputArray;
+}
+
+/*
+ * Class:     ai_onnxruntime_OnnxSequence
  * Method:    getDoubleValues
  * Signature: (JJI)[D
  */

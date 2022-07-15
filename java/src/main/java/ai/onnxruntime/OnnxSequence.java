@@ -65,17 +65,13 @@ public class OnnxSequence implements OnnxValue {
   @Override
   public List<Object> getValue() throws OrtException {
     if (info.sequenceOfMaps) {
-      List<Object> outputSequence = new ArrayList<>(info.length);
-      for (int i = 0; i < info.length; i++) {
-        Object[] keys = getMapKeys(i);
-        Object[] values = getMapValues(i);
-        HashMap<Object, Object> map = new HashMap<>(OrtUtil.capacityFromSize(keys.length));
-        for (int j = 0; j < keys.length; j++) {
-          map.put(keys[j], values[j]);
-        }
-        outputSequence.add(map);
-      }
-      return outputSequence;
+       float[] floats = getFloatValuesAll(OnnxRuntime.ortApiHandle, nativeHandle, allocatorHandle, 1);
+       ArrayList<Object> boxed = new ArrayList<>(floats.length);
+       for (float aFloat : floats) {
+         // box float to Float
+         boxed.add(aFloat);
+       }
+       return boxed;
     } else {
       switch (info.sequenceType) {
         case FLOAT:
@@ -202,6 +198,9 @@ public class OnnxSequence implements OnnxValue {
 
   private native float[] getFloatValues(
       long apiHandle, long nativeHandle, long allocatorHandle, int index) throws OrtException;
+
+  private native float[] getFloatValuesAll(
+      long apiHandle, long nativeHandle, long allocatorHandle, int valueIndex) throws OrtException;
 
   private native double[] getDoubleValues(
       long apiHandle, long nativeHandle, long allocatorHandle, int index) throws OrtException;
